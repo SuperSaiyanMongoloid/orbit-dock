@@ -228,7 +228,7 @@ export default function InboxPage() {
         if (focusedIdx >= 0 && filtered[focusedIdx]) {
           toggleRead(filtered[focusedIdx].id);
         }
-      } else if (e.key === "A" && e.shiftKey) {
+      } else if ((e.key === "A" || e.key === "a") && e.shiftKey) {
         // Shift+A = mark all read
         e.preventDefault();
         markAllAsRead();
