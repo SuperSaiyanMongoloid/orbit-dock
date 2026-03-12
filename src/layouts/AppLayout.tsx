@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "@/lib/navigation";
 import { useMemo, useState } from "react";
 import { SidebarRoot } from "@/features/sidebar";
 import { buildSidebarConfig } from "@/features/sidebar/build-config";

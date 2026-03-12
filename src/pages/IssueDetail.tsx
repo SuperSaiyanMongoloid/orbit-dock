@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "@/lib/navigation";
 import { useIssue, useUpdateIssue } from "@/hooks/use-issues";
 import { cn } from "@/lib/utils";
 import {

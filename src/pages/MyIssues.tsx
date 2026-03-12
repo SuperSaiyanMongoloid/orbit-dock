@@ -1,5 +1,5 @@
 import { IssuesView } from "@/features/issues/issues-view";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/navigation";
 
 export default function MyIssuesPage() {
   const navigate = useNavigate();
