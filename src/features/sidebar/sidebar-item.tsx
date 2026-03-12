@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import type { NavItem } from "./types";
 import { useSidebarStore } from "./store";
 import { SidebarContextMenu } from "./sidebar-context-menu";
+import { Kbd } from "@/components/kbd";
 
 interface SidebarItemProps {
   item: NavItem;
@@ -13,7 +14,6 @@ export function SidebarItem({ item, indent }: SidebarItemProps) {
   const { setActiveItem } = useSidebarStore();
   const location = useLocation();
 
-  // Active state derived from current route when href is present
   const isActive = item.href
     ? location.pathname === item.href
     : useSidebarStore.getState().activeItemId === item.id;
@@ -38,15 +38,16 @@ export function SidebarItem({ item, indent }: SidebarItemProps) {
         </span>
       )}
       {item.shortcut && (
-        <span className="ml-auto text-[11px] text-li-text-muted font-mono">
-          {item.shortcut}
-        </span>
+        <Kbd
+          keys={item.shortcut.split(" ")}
+          className="ml-auto opacity-0 group-hover/item:opacity-100 transition-opacity"
+        />
       )}
     </>
   );
 
   const className = cn(
-    "flex items-center gap-2 h-[27px] px-2 rounded-md cursor-pointer select-none transition-colors duration-75",
+    "group/item flex items-center gap-2 h-[27px] px-2 rounded-md cursor-pointer select-none transition-colors duration-75",
     isActive
       ? "bg-li-bg-active text-li-text-bright font-medium"
       : "text-li-text hover:bg-li-bg-hover hover:text-li-text-bright"
