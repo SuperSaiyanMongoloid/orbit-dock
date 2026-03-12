@@ -1,5 +1,5 @@
 /**
- * Shared route-level shortcut pattern.
+ * Shared route-level shortcut pattern using native keydown.
  *
  * Shortcut scheme:
  *   s            = toggle read on focused item
@@ -12,78 +12,93 @@
  *   1            = filter: all
  *   2            = filter: unread
  */
-import { useShortcut } from "@remcostoeten/use-shortcut";
+import { useEffect, useRef } from "react";
 
 export interface RouteActions {
-  /** n / Shift+N — new item */
   onNew?: () => void;
-  /** o — open selected item */
   onOpen?: () => void;
-  /** e — focus editor */
   onEdit?: () => void;
-  /** / — focus primary input */
   onFocusInput?: () => void;
-  /** Alt+S — save */
   onSave?: () => void;
-  /** s — toggle read/unread on focused item */
   onToggleRead?: () => void;
-  /** Shift+A — mark all as read */
   onMarkAllRead?: () => void;
-  /** 1 — filter: all */
   onFilterAll?: () => void;
-  /** 2 — filter: unread */
   onFilterUnread?: () => void;
 }
 
+function isTyping(e: KeyboardEvent): boolean {
+  const tag = (e.target as HTMLElement)?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if ((e.target as HTMLElement)?.isContentEditable) return true;
+  return false;
+}
+
 export function useRouteShortcuts(actions: RouteActions) {
-  const $ = useShortcut({ ignoreInputs: true });
+  const actionsRef = useRef(actions);
+  actionsRef.current = actions;
 
-  if (actions.onNew) {
-    const cb = actions.onNew;
-    $.key("n").except("typing").on(() => cb());
-    $.shift.key("n").except("typing").on(() => cb());
-  }
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (isTyping(e)) return;
 
-  if (actions.onOpen) {
-    const cb = actions.onOpen;
-    $.key("o").except("typing").on(() => cb());
-  }
+      const a = actionsRef.current;
+      const key = e.key.toLowerCase();
+      const shift = e.shiftKey;
+      const alt = e.altKey;
+      const meta = e.metaKey || e.ctrlKey;
 
-  if (actions.onEdit) {
-    const cb = actions.onEdit;
-    $.key("e").except("typing").on(() => cb());
-  }
+      // Don't intercept modifier combos we don't handle
+      if (meta) return;
 
-  if (actions.onFocusInput) {
-    const cb = actions.onFocusInput;
-    $.key("/").except("typing").on(() => cb(), { preventDefault: true });
-  }
+      // Alt+S = save
+      if (alt && key === "s" && a.onSave) {
+        e.preventDefault();
+        a.onSave();
+        return;
+      }
+      if (alt) return;
 
-  if (actions.onSave) {
-    const cb = actions.onSave;
-    $.alt.key("s").on(() => cb(), { preventDefault: true });
-  }
+      // Shift+A = mark all read
+      if (shift && key === "a" && a.onMarkAllRead) {
+        e.preventDefault();
+        a.onMarkAllRead();
+        return;
+      }
+      // Shift+N = new
+      if (shift && key === "n" && a.onNew) {
+        e.preventDefault();
+        a.onNew();
+        return;
+      }
+      if (shift) return;
 
-  // s = toggle read on focused
-  if (actions.onToggleRead) {
-    const cb = actions.onToggleRead;
-    $.key("s").except("typing").on(() => cb());
-  }
+      // Single keys (no modifiers)
+      switch (key) {
+        case "s":
+          if (a.onToggleRead) { a.onToggleRead(); }
+          break;
+        case "n":
+          if (a.onNew) { a.onNew(); }
+          break;
+        case "o":
+          if (a.onOpen) { a.onOpen(); }
+          break;
+        case "e":
+          if (a.onEdit) { a.onEdit(); }
+          break;
+        case "/":
+          if (a.onFocusInput) { e.preventDefault(); a.onFocusInput(); }
+          break;
+        case "1":
+          if (a.onFilterAll) { a.onFilterAll(); }
+          break;
+        case "2":
+          if (a.onFilterUnread) { a.onFilterUnread(); }
+          break;
+      }
+    }
 
-  // Shift+A = mark all read
-  if (actions.onMarkAllRead) {
-    const cb = actions.onMarkAllRead;
-    $.shift.key("a").except("typing").on(() => cb());
-  }
-
-  // Filter shortcuts
-  if (actions.onFilterAll) {
-    const cb = actions.onFilterAll;
-    $.key("1").except("typing").on(() => cb());
-  }
-
-  if (actions.onFilterUnread) {
-    const cb = actions.onFilterUnread;
-    $.key("2").except("typing").on(() => cb());
-  }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 }

@@ -25,7 +25,7 @@ export function createMockNotificationService(): NotificationService {
 
   return {
     async list() {
-      return notifications;
+      return notifications.map((n) => ({ ...n }));
     },
 
     async getUnreadCount() {

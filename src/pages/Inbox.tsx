@@ -223,9 +223,22 @@ export default function InboxPage() {
       ) {
         e.preventDefault();
         toggleRead(filtered[focusedIdx].id);
+      } else if (e.key === "s" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // S = toggle read on focused
+        if (focusedIdx >= 0 && filtered[focusedIdx]) {
+          toggleRead(filtered[focusedIdx].id);
+        }
+      } else if ((e.key === "A" || e.key === "a") && e.shiftKey) {
+        // Shift+A = mark all read
+        e.preventDefault();
+        markAllAsRead();
+      } else if (e.key === "1") {
+        setFilter("all");
+      } else if (e.key === "2") {
+        setFilter("unread");
       }
     },
-    [focusedIdx, filtered, clampIdx]
+    [focusedIdx, filtered, clampIdx, markAllAsRead]
   );
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
