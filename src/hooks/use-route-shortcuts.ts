@@ -2,8 +2,8 @@
  * Shared route-level shortcut pattern.
  *
  * Shortcut scheme:
- *   a → r       = toggle read on focused item (action + read)
- *   a → r → a   = mark all read (action + read + all)
+ *   s            = toggle read on focused item
+ *   Shift+A      = mark all read
  *   n / Shift+N  = new item
  *   o            = open selected
  *   e            = focus editor
@@ -25,9 +25,9 @@ export interface RouteActions {
   onFocusInput?: () => void;
   /** Alt+S — save */
   onSave?: () => void;
-  /** a → r — toggle read/unread on focused item */
+  /** s — toggle read/unread on focused item */
   onToggleRead?: () => void;
-  /** a → r → a — mark all as read */
+  /** Shift+A — mark all as read */
   onMarkAllRead?: () => void;
   /** 1 — filter: all */
   onFilterAll?: () => void;
@@ -36,7 +36,7 @@ export interface RouteActions {
 }
 
 export function useRouteShortcuts(actions: RouteActions) {
-  const $ = useShortcut({ ignoreInputs: true, sequenceTimeout: 600 });
+  const $ = useShortcut({ ignoreInputs: true });
 
   if (actions.onNew) {
     const cb = actions.onNew;
@@ -64,16 +64,16 @@ export function useRouteShortcuts(actions: RouteActions) {
     $.alt.key("s").on(() => cb(), { preventDefault: true });
   }
 
-  // a → r = toggle read on focused
+  // s = toggle read on focused
   if (actions.onToggleRead) {
     const cb = actions.onToggleRead;
-    $.key("a").then("r").except("typing").on(() => cb());
+    $.key("s").except("typing").on(() => cb());
   }
 
-  // a → r → a = mark all read
+  // Shift+A = mark all read
   if (actions.onMarkAllRead) {
     const cb = actions.onMarkAllRead;
-    $.key("a").then("r").then("a").except("typing").on(() => cb());
+    $.shift.key("a").except("typing").on(() => cb());
   }
 
   // Filter shortcuts

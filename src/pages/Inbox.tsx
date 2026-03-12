@@ -72,10 +72,9 @@ function NotificationRow({
         <span className="text-[11px] text-li-text-muted">
           {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
         </span>
-        {/* Kbd hint on focus */}
         {isFocused && (
           <span className="flex items-center gap-1 opacity-60">
-            <Kbd keys={["Space"]} className="text-[9px]" />
+            <Kbd keys={["S"]} className="text-[9px]" />
           </span>
         )}
         {!n.read && (
@@ -144,7 +143,7 @@ export default function InboxPage() {
   const { data: notifications = [], isLoading } = useNotifications();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const [focusedIdx, setFocusedIdx] = useState(-1);
+  const [focusedIdx, setFocusedIdx] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const setCount = useCounterStore((s) => s.setCount);
 
@@ -158,6 +157,15 @@ export default function InboxPage() {
   useEffect(() => {
     setCount("inbox", unreadCount);
   }, [unreadCount, setCount]);
+
+  // Auto-select first item when list changes
+  useEffect(() => {
+    if (filtered.length > 0 && focusedIdx < 0) {
+      setFocusedIdx(0);
+    } else if (focusedIdx >= filtered.length) {
+      setFocusedIdx(Math.max(0, filtered.length - 1));
+    }
+  }, [filtered.length, focusedIdx]);
 
   const markAsRead = async (id: string) => {
     const svc = getNotificationService();
@@ -236,7 +244,7 @@ export default function InboxPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setFilter("all")}
             className={cn(
@@ -268,18 +276,18 @@ export default function InboxPage() {
             >
               <CheckCheck className="h-3 w-3" />
               Mark all read
-              <Kbd keys={["A", "R", "A"]} />
+              <Kbd keys={["⇧", "A"]} />
             </button>
           )}
         </div>
       </div>
 
-      {/* List footer hint */}
+      {/* List hint bar */}
       <div className="flex items-center gap-3 px-4 py-1.5 border-b border-li-divider text-[10px] text-li-text-muted shrink-0">
         <span className="flex items-center gap-1"><Kbd keys={["↑", "↓"]} /> navigate</span>
         <span className="flex items-center gap-1"><Kbd keys={["Space"]} /> toggle read</span>
-        <span className="flex items-center gap-1"><Kbd keys={["A", "R"]} /> toggle focused</span>
-        <span className="flex items-center gap-1"><Kbd keys={["A", "R", "A"]} /> read all</span>
+        <span className="flex items-center gap-1"><Kbd keys={["S"]} /> toggle focused</span>
+        <span className="flex items-center gap-1"><Kbd keys={["⇧", "A"]} /> read all</span>
       </div>
 
       {/* Content */}

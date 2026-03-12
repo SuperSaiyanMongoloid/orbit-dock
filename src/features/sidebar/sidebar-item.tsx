@@ -32,17 +32,21 @@ export function SidebarItem({ item, indent }: SidebarItemProps) {
         />
       )}
       <span className="truncate text-[13px]">{item.label}</span>
-      {item.badge && (
-        <span className="ml-auto text-[11px] tabular-nums text-li-text-badge">
-          {item.badge.count}
-        </span>
-      )}
-      {item.shortcut && (
-        <Kbd
-          keys={item.shortcut.split(" ")}
-          className="ml-auto opacity-0 group-hover/item:opacity-100 transition-opacity"
-        />
-      )}
+
+      {/* Right side: badge count + shortcut on hover */}
+      <span className="ml-auto flex items-center gap-1.5 shrink-0">
+        {item.badge != null && (
+          <span className="text-[11px] tabular-nums text-li-text-badge min-w-[16px] text-right">
+            {item.badge.count}
+          </span>
+        )}
+        {item.shortcut && (
+          <Kbd
+            keys={item.shortcut.split(" ")}
+            className="opacity-0 group-hover/item:opacity-100 transition-opacity"
+          />
+        )}
+      </span>
     </>
   );
 

@@ -43,8 +43,8 @@ const SECTIONS = [
   {
     title: "Inbox",
     shortcuts: [
-      { keys: ["A", "R"], label: "Toggle read/unread" },
-      { keys: ["A", "R", "A"], label: "Mark all as read" },
+      { keys: ["S"], label: "Toggle read/unread" },
+      { keys: ["⇧", "A"], label: "Mark all as read" },
       { keys: ["1"], label: "Filter: All" },
       { keys: ["2"], label: "Filter: Unread" },
     ],
