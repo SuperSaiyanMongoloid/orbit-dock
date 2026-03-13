@@ -1,6 +1,6 @@
 import { Eye } from "lucide-react";
 
-export default function ViewsPage() {
+export function ViewsView() {
   return (
     <div className="flex-1 flex flex-col bg-li-content-bg min-h-0">
       <div className="flex items-center h-11 px-4 border-b border-li-content-border shrink-0">

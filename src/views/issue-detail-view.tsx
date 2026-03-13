@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "@/lib/navigation";
 import { useIssue, useUpdateIssue } from "@/hooks/use-issues";
 import { cn } from "@/lib/utils";
 import {
@@ -108,7 +108,7 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
 
 // ─── Full Issue Detail Page ─────────────────────────────
 
-export default function IssueDetailPage() {
+export function IssueDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: issue, isLoading } = useIssue(id ?? "");

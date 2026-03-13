@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from "@/lib/utils";
 import { Kbd, getModKey } from "@/components/kbd";
 import { X } from "lucide-react";

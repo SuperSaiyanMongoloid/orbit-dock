@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { GitPullRequest } from "lucide-react";
 import { useCounterStore } from "@/stores/counter-store";
 
-export default function ReviewsPage() {
+export function ReviewsView() {
   const setCount = useCounterStore((s) => s.setCount);
 
   // Reviews not implemented yet — counter stays at 0

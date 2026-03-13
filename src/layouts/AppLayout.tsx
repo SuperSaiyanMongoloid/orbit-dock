@@ -1,5 +1,7 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
+'use client';
+
+import { useNavigate } from "@/lib/navigation";
+import { useMemo, useState, ReactNode } from "react";
 import { SidebarRoot } from "@/features/sidebar";
 import { buildSidebarConfig } from "@/features/sidebar/build-config";
 import { useCurrentUser } from "@/hooks/use-user";
@@ -9,7 +11,7 @@ import { SearchCommand } from "@/components/search-command";
 import { ShortcutCheatsheet } from "@/components/shortcut-cheatsheet";
 import { useShortcut } from "@remcostoeten/use-shortcut";
 
-export default function AppLayout() {
+export default function AppLayout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const { data: teams } = useTeams();
@@ -64,7 +66,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <SidebarRoot config={sidebarConfig} />
-      <Outlet />
+      {children}
       <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
       <ShortcutCheatsheet open={cheatsheetOpen} onOpenChange={setCheatsheetOpen} />
     </div>

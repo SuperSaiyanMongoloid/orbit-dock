@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/navigation";
 import { Kbd } from "@/components/kbd";
 import { useCounterStore } from "@/stores/counter-store";
 import { useRouteShortcuts } from "@/hooks/use-route-shortcuts";

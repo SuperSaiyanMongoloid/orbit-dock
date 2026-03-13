@@ -139,7 +139,7 @@ function NotificationGroup({
 
 // ─── Page ──────────────────────────────────────────────
 
-export default function InboxPage() {
+export function InboxView() {
   const { data: notifications = [], isLoading } = useNotifications();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "unread">("all");
