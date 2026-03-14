@@ -1,5 +1,16 @@
+'use client';
+
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Inbox as InboxIcon, Check, CheckCheck, Circle, ChevronRight } from "lucide-react";
+import {
+  Inbox as InboxIcon,
+  Check,
+  CheckCheck,
+  Circle,
+  ChevronRight,
+  Trash2,
+  Mail,
+  MailOpen,
+} from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getNotificationService } from "@/services";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,7 +18,9 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from "date-fns";
 import { Kbd } from "@/components/kbd";
 import { useCounterStore } from "@/stores/counter-store";
-import { useRouteShortcuts } from "@/hooks/use-route-shortcuts";
+import { useListSelection } from "@/hooks/use-list-selection";
+import { BulkActionDialog, type BulkActionType } from "@/components/bulk-action-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Notification } from "@/services/types";
 
 // ─── Helpers ────────────────────────────────────────────
@@ -38,27 +51,62 @@ function groupByDate(items: Notification[]) {
 
 function NotificationRow({
   n,
+  index,
   isFocused,
+  isSelected,
+  showCheckbox,
+  onToggleSelect,
   onMarkRead,
 }: {
   n: Notification;
+  index: number;
   isFocused: boolean;
+  isSelected: boolean;
+  showCheckbox: boolean;
+  onToggleSelect: (index: number) => void;
   onMarkRead: (id: string) => void;
 }) {
   return (
     <div
       className={cn(
-        "flex items-center h-[42px] px-4 border-b border-li-divider transition-colors cursor-pointer hover:bg-li-bg-hover group",
+        "flex items-center h-[42px] px-4 border-b border-li-divider transition-colors cursor-pointer group",
         !n.read && "bg-li-bg-hover/50",
-        isFocused && "ring-1 ring-inset ring-li-dot-blue bg-li-bg-hover"
+        isFocused && "ring-1 ring-inset ring-li-dot-blue",
+        isSelected && "bg-li-dot-blue/10",
+        !isSelected && !isFocused && "hover:bg-li-bg-hover"
       )}
-      onClick={() => !n.read && onMarkRead(n.id)}
+      onClick={(e) => {
+        if (e.shiftKey || showCheckbox) {
+          onToggleSelect(index);
+        } else if (!n.read) {
+          onMarkRead(n.id);
+        }
+      }}
       tabIndex={-1}
+      role="row"
+      aria-selected={isSelected}
     >
+      {/* Checkbox / Unread indicator */}
+      <div className="flex items-center gap-2 shrink-0 mr-2">
+        {showCheckbox ? (
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect(index)}
+            onClick={(e) => e.stopPropagation()}
+            className="h-3.5 w-3.5 border-li-border data-[state=checked]:bg-li-dot-blue data-[state=checked]:border-li-dot-blue"
+            aria-label={`Select notification: ${n.title}`}
+          />
+        ) : (
+          <div className="w-3.5 flex justify-center">
+            {!n.read && (
+              <Circle className="h-2 w-2 text-li-dot-blue fill-li-dot-blue" />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-2 flex justify-center shrink-0">
-          {!n.read && <Circle className="h-2 w-2 text-li-dot-blue fill-li-dot-blue" />}
-        </div>
         <span
           className={cn(
             "text-[13px] truncate",
@@ -68,16 +116,18 @@ function NotificationRow({
           {n.title}
         </span>
       </div>
+
+      {/* Meta & actions */}
       <div className="flex items-center gap-2 shrink-0 ml-4">
         <span className="text-[11px] text-li-text-muted">
           {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
         </span>
-        {isFocused && (
+        {isFocused && !showCheckbox && (
           <span className="flex items-center gap-1 opacity-60">
-            <Kbd keys={["S"]} className="text-[9px]" />
+            <Kbd keys={["Space"]} className="text-[9px]" />
           </span>
         )}
-        {!n.read && (
+        {!showCheckbox && !n.read && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -85,6 +135,7 @@ function NotificationRow({
             }}
             className="opacity-0 group-hover:opacity-100 transition-opacity text-li-text-muted hover:text-li-text-bright"
             title="Mark as read"
+            aria-label="Mark as read"
           >
             <Check className="h-3.5 w-3.5" />
           </button>
@@ -99,21 +150,30 @@ function NotificationRow({
 function NotificationGroup({
   label,
   items,
-  focusedId,
+  itemIndexOffset,
+  focusedIndex,
+  selection,
+  showCheckboxes,
+  onToggleSelect,
   onMarkRead,
 }: {
   label: string;
   items: Notification[];
-  focusedId: string | null;
+  itemIndexOffset: number;
+  focusedIndex: number;
+  selection: UseListSelectionReturn;
+  showCheckboxes: boolean;
+  onToggleSelect: (index: number) => void;
   onMarkRead: (id: string) => void;
 }) {
   const [open, setOpen] = useState(true);
 
   return (
-    <div>
+    <div role="rowgroup" aria-label={label}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 w-full px-4 py-1.5 text-[11px] font-medium text-li-text-muted uppercase tracking-wider hover:text-li-text-bright transition-colors"
+        aria-expanded={open}
       >
         <ChevronRight
           className={cn(
@@ -125,17 +185,27 @@ function NotificationGroup({
         <span className="text-li-text-badge ml-1">{items.length}</span>
       </button>
       {open &&
-        items.map((n) => (
-          <NotificationRow
-            key={n.id}
-            n={n}
-            isFocused={focusedId === n.id}
-            onMarkRead={onMarkRead}
-          />
-        ))}
+        items.map((n, localIdx) => {
+          const globalIdx = itemIndexOffset + localIdx;
+          return (
+            <NotificationRow
+              key={n.id}
+              n={n}
+              index={globalIdx}
+              isFocused={selection.isFocused(globalIdx)}
+              isSelected={selection.isSelected(n.id)}
+              showCheckbox={showCheckboxes}
+              onToggleSelect={onToggleSelect}
+              onMarkRead={onMarkRead}
+            />
+          );
+        })}
     </div>
   );
 }
+
+// Type for selection return
+type UseListSelectionReturn = ReturnType<typeof useListSelection<Notification>>;
 
 // ─── Page ──────────────────────────────────────────────
 
@@ -143,9 +213,13 @@ export function InboxView() {
   const { data: notifications = [], isLoading } = useNotifications();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const [focusedIdx, setFocusedIdx] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const setCount = useCounterStore((s) => s.setCount);
+
+  // Bulk action dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<BulkActionType>("delete");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const filtered = useMemo(
     () => (filter === "unread" ? notifications.filter((n) => !n.read) : notifications),
@@ -158,14 +232,15 @@ export function InboxView() {
     setCount("inbox", unreadCount);
   }, [unreadCount, setCount]);
 
-  // Auto-select first item when list changes
-  useEffect(() => {
-    if (filtered.length > 0 && focusedIdx < 0) {
-      setFocusedIdx(0);
-    } else if (focusedIdx >= filtered.length) {
-      setFocusedIdx(Math.max(0, filtered.length - 1));
-    }
-  }, [filtered.length, focusedIdx]);
+  // Multi-selection hook
+  const selection = useListSelection({
+    items: filtered,
+    getItemId: (n) => n.id,
+  });
+
+  const showCheckboxes = selection.hasSelection;
+
+  // ─── Actions ──────────────────────────────────────────
 
   const markAsRead = async (id: string) => {
     const svc = getNotificationService();
@@ -173,16 +248,46 @@ export function InboxView() {
     qc.invalidateQueries({ queryKey: ["notifications"] });
   };
 
-  const toggleRead = async (id: string) => {
-    const svc = getNotificationService();
-    const notif = notifications.find((n) => n.id === id);
-    if (!notif) return;
-    if (notif.read) {
-      await svc.markAsUnread?.(id);
-    } else {
-      await svc.markAsRead?.(id);
+  const handleBulkMarkRead = async () => {
+    setIsProcessing(true);
+    try {
+      const svc = getNotificationService();
+      const ids = Array.from(selection.selectedIds);
+      await svc.markManyAsRead?.(ids);
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      selection.clearSelection();
+    } finally {
+      setIsProcessing(false);
+      setDialogOpen(false);
     }
-    qc.invalidateQueries({ queryKey: ["notifications"] });
+  };
+
+  const handleBulkMarkUnread = async () => {
+    setIsProcessing(true);
+    try {
+      const svc = getNotificationService();
+      const ids = Array.from(selection.selectedIds);
+      await svc.markManyAsUnread?.(ids);
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      selection.clearSelection();
+    } finally {
+      setIsProcessing(false);
+      setDialogOpen(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsProcessing(true);
+    try {
+      const svc = getNotificationService();
+      const ids = Array.from(selection.selectedIds);
+      await svc.deleteMany?.(ids);
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      selection.clearSelection();
+    } finally {
+      setIsProcessing(false);
+      setDialogOpen(false);
+    }
   };
 
   const markAllAsRead = async () => {
@@ -191,58 +296,87 @@ export function InboxView() {
     qc.invalidateQueries({ queryKey: ["notifications"] });
   };
 
-  // ─── Route shortcuts ──────────────────────────────────
-  useRouteShortcuts({
-    onToggleRead: () => {
-      if (focusedIdx >= 0 && filtered[focusedIdx]) {
-        toggleRead(filtered[focusedIdx].id);
-      }
-    },
-    onMarkAllRead: () => markAllAsRead(),
-    onFilterAll: () => setFilter("all"),
-    onFilterUnread: () => setFilter("unread"),
-  });
+  const openBulkDialog = (action: BulkActionType) => {
+    if (!selection.hasSelection) return;
+    setDialogAction(action);
+    setDialogOpen(true);
+  };
 
-  const clampIdx = useCallback(
-    (idx: number) => Math.max(0, Math.min(idx, filtered.length - 1)),
-    [filtered.length]
-  );
+  const handleConfirm = () => {
+    switch (dialogAction) {
+      case "delete":
+        handleBulkDelete();
+        break;
+      case "markRead":
+        handleBulkMarkRead();
+        break;
+      case "markUnread":
+        handleBulkMarkUnread();
+        break;
+    }
+  };
+
+  // ─── Keyboard handlers ────────────────────────────────
 
   const handleListKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown" || e.key === "j") {
+      // Let selection hook handle arrow keys and space
+      selection.handleKeyDown(e);
+
+      const key = e.key.toLowerCase();
+
+      // Shift+A = Select all
+      if (e.shiftKey && key === "a") {
         e.preventDefault();
-        setFocusedIdx((i) => clampIdx(i + 1));
-      } else if (e.key === "ArrowUp" || e.key === "k") {
-        e.preventDefault();
-        setFocusedIdx((i) => clampIdx(i - 1));
-      } else if (
-        (e.key === "Enter" || e.key === " ") &&
-        focusedIdx >= 0 &&
-        filtered[focusedIdx]
-      ) {
-        e.preventDefault();
-        toggleRead(filtered[focusedIdx].id);
-      } else if (e.key === "s" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // S = toggle read on focused
-        if (focusedIdx >= 0 && filtered[focusedIdx]) {
-          toggleRead(filtered[focusedIdx].id);
+        selection.selectAll();
+        return;
+      }
+
+      // Only handle bulk actions when items are selected
+      if (selection.hasSelection) {
+        // R = Mark selected as read
+        if (key === "r" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          openBulkDialog("markRead");
+          return;
         }
-      } else if ((e.key === "A" || e.key === "a") && e.shiftKey) {
-        // Shift+A = mark all read
-        e.preventDefault();
-        markAllAsRead();
-      } else if (e.key === "1") {
+
+        // U = Mark selected as unread
+        if (key === "u" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          openBulkDialog("markUnread");
+          return;
+        }
+
+        // Backspace = Delete selected
+        if (key === "backspace" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          openBulkDialog("delete");
+          return;
+        }
+      }
+
+      // Filter shortcuts
+      if (key === "1") {
         setFilter("all");
-      } else if (e.key === "2") {
+      } else if (key === "2") {
         setFilter("unread");
       }
     },
-    [focusedIdx, filtered, clampIdx, markAllAsRead]
+    [selection]
   );
 
+  // Calculate item index offset for each group
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
-  const focusedId = focusedIdx >= 0 ? filtered[focusedIdx]?.id ?? null : null;
+  const groupOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    let offset = 0;
+    for (const group of groups) {
+      offsets.push(offset);
+      offset += group.items.length;
+    }
+    return offsets;
+  }, [groups]);
 
   return (
     <div className="flex-1 flex flex-col bg-li-content-bg min-h-0">
@@ -282,25 +416,78 @@ export function InboxView() {
             Unread
             <Kbd keys={["2"]} />
           </button>
-          {unreadCount > 0 && (
+          {unreadCount > 0 && !selection.hasSelection && (
             <button
               onClick={markAllAsRead}
               className="flex items-center gap-1.5 text-[12px] text-li-text-muted hover:text-li-text-bright transition-colors px-2 py-1 rounded hover:bg-li-bg-hover ml-1"
             >
               <CheckCheck className="h-3 w-3" />
               Mark all read
-              <Kbd keys={["⇧", "A"]} />
             </button>
           )}
         </div>
       </div>
 
-      {/* List hint bar */}
+      {/* Selection toolbar */}
+      {selection.hasSelection && (
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-li-content-border bg-li-bg-hover/50 shrink-0">
+          <span className="text-[12px] text-li-text-bright font-medium">
+            {selection.selectionCount} selected
+          </span>
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              onClick={() => openBulkDialog("markRead")}
+              className="flex items-center gap-1.5 text-[12px] text-li-text-muted hover:text-li-text-bright transition-colors px-2 py-1 rounded hover:bg-li-bg-hover"
+              title="Mark selected as read (R)"
+            >
+              <MailOpen className="h-3.5 w-3.5" />
+              Read
+              <Kbd keys={["R"]} />
+            </button>
+            <button
+              onClick={() => openBulkDialog("markUnread")}
+              className="flex items-center gap-1.5 text-[12px] text-li-text-muted hover:text-li-text-bright transition-colors px-2 py-1 rounded hover:bg-li-bg-hover"
+              title="Mark selected as unread (U)"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Unread
+              <Kbd keys={["U"]} />
+            </button>
+            <button
+              onClick={() => openBulkDialog("delete")}
+              className="flex items-center gap-1.5 text-[12px] text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded hover:bg-red-500/10"
+              title="Delete selected (Backspace)"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+              <Kbd keys={["⌫"]} />
+            </button>
+            <button
+              onClick={() => selection.clearSelection()}
+              className="flex items-center gap-1.5 text-[12px] text-li-text-muted hover:text-li-text-bright transition-colors px-2 py-1 rounded hover:bg-li-bg-hover ml-2"
+              title="Clear selection (Esc)"
+            >
+              Clear
+              <Kbd keys={["Esc"]} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Keyboard hints */}
       <div className="flex items-center gap-3 px-4 py-1.5 border-b border-li-divider text-[10px] text-li-text-muted shrink-0">
-        <span className="flex items-center gap-1"><Kbd keys={["↑", "↓"]} /> navigate</span>
-        <span className="flex items-center gap-1"><Kbd keys={["Space"]} /> toggle read</span>
-        <span className="flex items-center gap-1"><Kbd keys={["S"]} /> toggle focused</span>
-        <span className="flex items-center gap-1"><Kbd keys={["⇧", "A"]} /> read all</span>
+        <span className="flex items-center gap-1">
+          <Kbd keys={["↑", "↓"]} /> navigate
+        </span>
+        <span className="flex items-center gap-1">
+          <Kbd keys={["⇧", "↑/↓"]} /> extend select
+        </span>
+        <span className="flex items-center gap-1">
+          <Kbd keys={["Space"]} /> toggle select
+        </span>
+        <span className="flex items-center gap-1">
+          <Kbd keys={["⇧", "A"]} /> select all
+        </span>
       </div>
 
       {/* Content */}
@@ -309,13 +496,13 @@ export function InboxView() {
         className="flex-1 overflow-auto outline-none"
         tabIndex={0}
         onKeyDown={handleListKeyDown}
-        onFocus={() => {
-          if (focusedIdx < 0 && filtered.length > 0) setFocusedIdx(0);
-        }}
+        role="grid"
+        aria-label="Notifications list"
+        aria-multiselectable="true"
       >
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <span className="text-sm text-li-text-muted">Loading…</span>
+            <span className="text-sm text-li-text-muted">Loading...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex items-center justify-center py-20 flex-col gap-2">
@@ -325,17 +512,31 @@ export function InboxView() {
             </p>
           </div>
         ) : (
-          groups.map((group) => (
+          groups.map((group, groupIdx) => (
             <NotificationGroup
               key={group.label}
               label={group.label}
               items={group.items}
-              focusedId={focusedId}
+              itemIndexOffset={groupOffsets[groupIdx]}
+              focusedIndex={selection.focusedIndex}
+              selection={selection}
+              showCheckboxes={showCheckboxes}
+              onToggleSelect={selection.toggleItem}
               onMarkRead={markAsRead}
             />
           ))
         )}
       </div>
+
+      {/* Bulk action confirmation dialog */}
+      <BulkActionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        actionType={dialogAction}
+        itemCount={selection.selectionCount}
+        onConfirm={handleConfirm}
+        isLoading={isProcessing}
+      />
     </div>
   );
 }

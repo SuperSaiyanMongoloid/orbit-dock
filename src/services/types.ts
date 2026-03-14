@@ -153,5 +153,9 @@ export interface NotificationService {
   markAsRead?: (id: string) => Promise<void>;
   markAsUnread?: (id: string) => Promise<void>;
   markAllAsRead?: () => Promise<void>;
+  markManyAsRead?: (ids: string[]) => Promise<void>;
+  markManyAsUnread?: (ids: string[]) => Promise<void>;
+  delete?: (id: string) => Promise<void>;
+  deleteMany?: (ids: string[]) => Promise<void>;
   getUnreadCount(): Promise<number>;
 }
