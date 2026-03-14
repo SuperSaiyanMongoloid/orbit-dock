@@ -45,5 +45,33 @@ export function createMockNotificationService(): NotificationService {
     async markAllAsRead() {
       notifications.forEach((n) => (n.read = true));
     },
+
+    async markManyAsRead(ids: string[]) {
+      const idSet = new Set(ids);
+      notifications.forEach((n) => {
+        if (idSet.has(n.id)) n.read = true;
+      });
+    },
+
+    async markManyAsUnread(ids: string[]) {
+      const idSet = new Set(ids);
+      notifications.forEach((n) => {
+        if (idSet.has(n.id)) n.read = false;
+      });
+    },
+
+    async delete(id: string) {
+      const index = notifications.findIndex((n) => n.id === id);
+      if (index !== -1) notifications.splice(index, 1);
+    },
+
+    async deleteMany(ids: string[]) {
+      const idSet = new Set(ids);
+      for (let i = notifications.length - 1; i >= 0; i--) {
+        if (idSet.has(notifications[i].id)) {
+          notifications.splice(i, 1);
+        }
+      }
+    },
   };
 }
