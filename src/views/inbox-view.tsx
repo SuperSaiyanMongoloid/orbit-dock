@@ -61,6 +61,7 @@ function NotificationRow({
   onToggleSelect,
   onToggleRead,
   onMarkRead,
+  onClick,
 }: {
   n: Notification;
   isFocused: boolean;
@@ -69,6 +70,7 @@ function NotificationRow({
   onToggleSelect: () => void;
   onToggleRead: () => void;
   onMarkRead: () => void;
+  onClick: () => void;
 }) {
   return (
     <div
@@ -80,10 +82,18 @@ function NotificationRow({
         !isSelected && !isFocused && "hover:bg-li-bg-hover"
       )}
       onClick={(e) => {
-        if (e.shiftKey || showCheckbox) {
+        if (e.shiftKey) {
+          // Shift+click extends selection
           onToggleSelect();
-        } else if (!n.read) {
-          onMarkRead();
+        } else if (showCheckbox) {
+          // When checkboxes visible, click toggles selection
+          onToggleSelect();
+        } else {
+          // Normal click: focus this item, clear selection, mark as read if unread
+          onClick();
+          if (!n.read) {
+            onMarkRead();
+          }
         }
       }}
       tabIndex={-1}
@@ -373,15 +383,18 @@ export function InboxView() {
     async (action: "read" | "unread" | "toggle") => {
       const { focusTarget, hasSelection } = selection;
       
+      // Map action to dialog type
+      const dialogType: BulkActionType = action === "unread" ? "markUnread" : "markRead";
+      
       // If selection exists, open dialog instead
       if (hasSelection) {
-        openBulkDialog(action === "toggle" ? "markRead" : action === "read" ? "markRead" : "markUnread");
+        openBulkDialog(dialogType);
         return;
       }
       
       // If focused on section, apply to all items in section (with dialog)
       if (focusTarget.type === "section") {
-        openBulkDialog(action === "toggle" ? "markRead" : action === "read" ? "markRead" : "markUnread");
+        openBulkDialog(dialogType);
         return;
       }
       
@@ -643,6 +656,7 @@ export function InboxView() {
                       onToggleSelect={() => selection.toggleItem(sectionIndex, itemIndex)}
                       onToggleRead={() => toggleRead(n.id, n.read)}
                       onMarkRead={() => markAsRead(n.id)}
+                      onClick={() => selection.focusItemOnly(sectionIndex, itemIndex)}
                     />
                   ))}
               </div>

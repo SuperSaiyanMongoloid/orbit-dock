@@ -52,6 +52,8 @@ export interface UseListSelectionReturn<T> {
   clearSelection: () => void;
   /** Set focus to a specific target */
   setFocus: (target: FocusTarget) => void;
+  /** Set focus to an item and clear selection (for click behavior) */
+  focusItemOnly: (sectionIndex: number, itemIndex: number) => void;
   /** Check if an item is selected */
   isSelected: (id: string) => boolean;
   /** Check if focus is on a specific section */
@@ -174,6 +176,16 @@ export function useListSelection<T>({
   const setFocus = useCallback((target: FocusTarget) => {
     setFocusTarget(target);
   }, []);
+
+  // Set focus to item and clear any existing selection (for click behavior)
+  const focusItemOnly = useCallback(
+    (sectionIndex: number, itemIndex: number) => {
+      setFocusTarget({ type: "item", sectionIndex, itemIndex });
+      setAnchorTarget({ type: "item", sectionIndex, itemIndex });
+      updateSelection(new Set());
+    },
+    [updateSelection]
+  );
 
   const isSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
@@ -326,8 +338,10 @@ export function useListSelection<T>({
           moveFocus("up", shiftKey);
           break;
         case "Tab":
-          if (!shiftKey) {
-            e.preventDefault();
+          e.preventDefault();
+          if (shiftKey) {
+            moveFocus("up", false);
+          } else {
             moveFocus("down", false);
           }
           break;
@@ -363,6 +377,7 @@ export function useListSelection<T>({
     toggleItem,
     clearSelection,
     setFocus,
+    focusItemOnly,
     isSelected,
     isSectionFocused,
     isItemFocused,
